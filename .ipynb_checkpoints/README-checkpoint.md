@@ -9,7 +9,7 @@ Here's a simple layout diagram:
 Factor only requires one thing:
 1. The place that you wish to setup your .factor folder must containe a `factor.conf` file.
 
-When running the `factor` command, you must be in the target directory containing this file or set the `FACTOR_FILE` environment variable to the path of the `factor.yaml` file.
+When running the `factor` command, you must be in the target directory containing this file or set the `FACTOR_FILE` environment variable to the path of the `factor.conf` file.
 
 ---
 
@@ -19,20 +19,18 @@ The conf file is structured as:
 [resource]
   url=
   tag=
-  requires='require1 ... requireN'
-  env='envfile1 ... envfileN'
+  requires=req1 ... reqN
+  env=env1 ... envN
   prefix=
-  isolate=
-  tools='tooldir1 ... tooldir2'
+  script=
 ```
 Here are the rules to the CONF file:
 1. `url` should specify the location to the target GIT repository. It is required.
 2. `tag` must be a valid tag in that repository. The default is `master`
 3. `requires` is a space-separated list of other resource names. They will be built first.
-4. `env` is a space-separated list of filenames under "%gitdir%/.factor/.env". Add files to that directory that export shell variables for your build scripts
+4. `env` is a space-separated list of section names in the `factor.conf`. Add entries to those sections; this will automatically export shell variables for your build scripts (no need to put 'export')
 5. `prefix` is the final destination of your resource's build. It will given as the variable `PREFIX` in your build script. This value changes if `isolate` is defined. You may also use the `%git%` variable to specify the path your GIT project root.
-6. `isolate` is a special field used to run your build script in a overlay-chroot combination. Packages like Apache2 can take advantage of this option since it embeds its prefix into its configurations and files. This option requires the build to be run as root. Resulting files will be chowned back to the user/group of the repository folder. The `PREFIX` variable is also modified to the value of `isolate` (the path defined for `isolate` should be the desired 'root' prefix e.x. `isolate=/usr` to get the `PREFIX` '/usr').
-7. `tools` is an important part of `isolate`, since the chroot environment created will not necessarily have all the tools you might need. Each directory listed in the variable will be a part of the overlay mount. It is highly recommended that you have a resource dedicated to 'busybox' and/or 'gcc', and have them added as dependencies, so that you can have them built and prepared for the overlay. **NOTE**: You cannot specify '/' (or any parent directory to '%gitroot%/.factor') as a tool directory; the overlay will fail.
+6. `script` is the location of the buildscript to execute in the module's directory. The scipt must be set as execuatble. You may use the `%git%` syntax to specifiy the location.
 
 ## Command Usage:
 git factor OPERATION TARGET1 ... TARGETn  
@@ -64,6 +62,35 @@ OPERATIONS:
   - prune:
       Remove the submodule. Then, run 'clean' on it. Then remove the entry
       from the 'factor.conf' file.
-    
+
 ## Installation
 Simply run `make install` to install the binary. To set a custom path, do `make PREFIX='<path>' install`
+
+### A note on `isolate`
+`isolate` is an experimental command used for special circumstances where a
+build may require absolute/system-root paths to install correctly. Here are
+the options:
+
+```
+isolate delta_dir [OPTIONS] CMD ARG1 ... ARGN
+
+OPTIONS:
+  -b|--bind <abs_dir>   Using an absolute path, bind this directory to the
+                        new pseudo-root. NOTE: You cannot specify the delta
+                        directory, not any of its parent folders
+                        
+  -l|--lower <abs_dir>  Using an absolute path, add a directory to the lowers
+                        that are mounted during the overlay. NOTE: You cannot 
+                        specify the delta directory, not any of its parent 
+                        folders
+
+  - delta_dir: The directory to deposite any changes made while in isolation
+  - CMD ARGS: The command and arguments to be executed in the environment
+  
+EXAMPLES:
+  ./isolate test -b /bin -b /usr/bin -b /lib -b /usr/lib echo hello
+```
+
+The script must be run as root. USE AT YOUR OWN RISK.
+If you'd like a potentially safe way to test this, run it
+in a Docker container.
