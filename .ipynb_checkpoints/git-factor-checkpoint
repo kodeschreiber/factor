@@ -1,0 +1,220 @@
+#!/bin/bash
+
+FACTOR_FILE="$(realpath "${FACTOR_FILE:-$(git rev-parse --show-toplevel)/factor.conf}")"
+HERE="$(dirname "${FACTOR_FILE}")"
+FACTDIR="${HERE}/.factor"
+RFACTDIR="$(echo "${FACTDIR}" | sed 's/.*\(\.factor\.*\)/\1/')"
+OPER="${1}"
+
+# _get_vars <resource>
+_get_vars() {
+  cat "${FACTOR_FILE}" | \
+  sed -n "/\[${1}\]/,/^\s*\[*[a-zA-Z0-9_-]*\]*$/"'!d'"; //d; /^\s*#/d; s/^\s*\([a-zA-Z][a-zA-Z0-9]*=.*\)/\1/; s@%git%@${HERE}@; p"
+}
+
+# _rem_vars <resource> <file>
+_rem_vars() {
+  sed -i "/\[${1}\]/,/^\s*\[*[a-zA-Z0-9_-]*\]*$/{/\[${1}\]/d;/^\s*\[*[a-zA-Z0-9_-]*\]*$/"'!d'"}" "${2}"
+}
+
+# _error <msg>
+_error() {
+  echo "[FACTOR] Error: $@" >&2
+  exit 10
+}
+
+_usage() {
+  cat <<EOF
+Usage: git factor OPERATION TARGET1 ... TARGETn  
+
+OPERATIONS:
+  - sync:
+      Firstly ensures that the '.factor' directory exists. Then, ensures the
+      basic directory structure for the module is present. Git submodule is 
+      then used to add/update the module.
+      
+  - build:
+      Run 'sync' on the module. Then, check if the build needs to continue;
+      if the tag or buildscript change, or if the 'cache' directory for the
+      module is missing, then proceed, otherwise, exit 11. Attempt to build
+      each prerequiste. If successful, create cache directory and clean the
+      git module directory. If isolation is not set, set the environment
+      variables and run the buildscript. Otherwise, create a bind-mount for
+      the root and module directories in the cache, chroot into the cache,
+      and execute the buildscript. Absolute paths defined in the PATH and
+      LD_LIBRARY_PATH are converted for the chroot environment.
+      
+  - compose:
+      Run 'build' on the module. Then copy the contents of the cache into
+      the 'prefix' directory.
+    
+  - clean:
+      Remove the modules '.factor' directory
+   
+  - prune:
+      Remove the submodule. Then, run 'clean' on it. Then remove the entry
+      from the 'factor.conf' file.
+   
+EOF
+}
+
+# _get_resource <resource>
+_get_resource() {
+  source <(_get_vars "${1}" | sed 's/\(.*\)/f_\1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/='/;s/\$/'/")
+  if [ -z "${f_url}" ]; then _error "No url defined for ${1}"; fi
+  if [ -z "${f_prefix}" ]; then _error "No prefix provided for ${1}"; fi
+  if [ -z "${f_script}" ]; then _error "No script defined for ${1}"; fi
+  f_tag="${f_tag:-master}"
+  f_moddir="${FACTDIR}/${1}"
+  f_lock="${f_moddir}/lock"
+  f_cache="${f_moddir}/cache"
+  f_module="${f_moddir}/module"
+  f_rmodule="${RFACTDIR}/${1}/module"
+  f_tagfile="${f_moddir}/tag"
+  f_tmp_root="${f_cache}/.root_bind"
+  f_tmp_module="${f_cache}/.module_bind"
+}
+
+_global_sync() {
+  mkdir -p "${FACTDIR}"
+  echo "." > "${FACTDIR}/.gitignore"
+}
+
+# _sync <resource>
+_sync() {
+  if [ ! -f "${FACTOR_FILE}" ]; then
+    _error "Could not find a factor.conf file in this repository"
+  fi
+  _global_sync
+  _get_resource "${1}"
+  
+  if [ ! -d "${f_moddir}" ]; then mkdir -p "${f_moddir}"; fi
+  if [ ! -f "${f_lock}" ]; then touch "${f_lock}"; fi
+  if [ ! -f "${f_tag}" ]; then touch "${f_tagfile}"; fi
+  if ! grep -qs "\[submodule \"${1}\"\]" "${HERE}/.gitmodules"; then
+    git submodule add --name "${1}" "${f_url}" "${f_rmodule}"
+  fi
+  
+  git config -f "${HERE}/.gitmodules" "submodule.${1}.branch" "${f_tag}"
+  git config -f "${HERE}/.gitmodules" "submodule.${1}.url" "${f_url}"
+  if [ "$(find "${f_module}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
+    git submodule update --init --force "${f_module}"
+  else
+    git submodule update --force "${f_module}"
+  fi
+}
+
+# _build <resource>
+_build() {
+  $0 sync "${1}"
+  if [ $? -ne 0 ]; then _error "Cannot build ${1}"; fi
+  _get_resource "${1}"
+
+  curr_hash="$(md5sum "${f_script}" | head -c32)"
+  lock_hash="$(cat "${f_lock}")"
+  lock_tag="$(cat "${f_tagfile}")"
+  
+  deprebuilt=0
+  while read req; do
+    if [ -z "${req}" ]; then continue; fi
+    $0 build "${req}"
+    case $? in
+      12) continue; ;;
+      11) deprebuilt=1; ;;
+      *) _error "Requirement '${req}' for resource '${1}' failed to build"; ;;
+    esac
+  done < <(echo "${f_requires}" | sed 's/ /\n/g')
+  
+  if [ 
+    $deprebuilt -ne 1 -a \
+    -d "${f_cache}" -a \
+    "${curr_hash}" == "${lock_hash}" -a \
+    "${f_tag}" == "${lock_tag}" \
+    ]; then exit 12; fi
+
+  (
+    cd "${f_module}"
+    git fetch --all 
+    git checkout "${f_tag}"
+  )
+  
+  if [ -d "${f_cache}" ]; then rm -rf "${f_cache}"; fi
+  if [ ! -d "${f_cache}" ]; then mkdir -p "${f_cache}"; fi
+  (
+    cd "${f_module}"
+    git reset --hard
+    git clean -xfd
+
+    export PREFIX="${f_cache}"
+    while read envi; do
+      source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/='/;s/\$/'/")
+    done < <(echo "${f_env}" | sed 's/ /\n/g')
+    env -C "${f_module}" "${f_script}"
+  )
+  
+  if [ $? -ne 0 ]; then _error "Failed to build package ${1}"; fi
+
+  echo "${curr_hash}" > "${f_lock}"
+  echo "${f_tag}" > "${f_tagfile}"
+  return 11
+}
+
+# _compose <resource>
+_compose() {
+  $0 build "${1}"
+  if [ $? -ne 11 ]; then _error "Failed to build "${1}""; fi
+  _get_resource "${1}"
+  while read req; do
+    if [ -z "${req}" ]; then
+      continue
+    fi
+    $0 compose "${req}"
+    if [ $? -ne 0 ]; then
+      _error "Requirement '${req}' for resource '${1}' failed to compose"
+    fi
+  done < <(echo "${f_requires}" | sed 's/ /\n/g')
+  mkdir -p "${f_prefix}"
+  rsync -av "${f_cache}/" "${f_prefix}/"
+}
+
+_clean() {
+  _get_resource "${1}"
+  rm -rf "${f_moddir}"
+}
+
+# _prune <resource>
+# There could be potentially a better way using the name "${1}"
+# as opposed to the modules path at "${f_module}"
+_prune() {
+  _get_resource "${1}"
+  git submodule deinit -f "${f_module}"
+  git rm -f "${f_module}"
+  _rem_vars "submodule \"${1}\"" "${HERE}/.gitmodules"
+  git add "${HERE}/.gitmodules"
+  # remove entry from .git/config?
+  git rm --cached "${f_module}"
+  git commit -m "Removed submodule ${1}"
+  rm -rf "${HERE}/.git/modules/${1}"
+  rm -rf "${f_module}"
+  git add .
+  $0 clean "${1}"
+  _rem_vars "${1}" "${FACTOR_FILE}"
+}
+
+if [ $# -lt 2 ]; then
+  _usage
+  _error "Too few arguments"
+fi
+
+shift
+while [ $# -gt 0 ]; do
+  case "${OPER}" in
+    sync) _sync "${1}"; ;;
+    build) _build "${1}"; exit $?; ;;
+    compose) _compose "${1}"; ;;
+    clean) _clean "${1}"; ;;
+    prune) _prune "${1}"; ;;
+    *) _usage; exit 1; ;;
+  esac
+  shift
+done

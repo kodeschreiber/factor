@@ -25,7 +25,7 @@ _error() {
 
 _usage() {
   cat <<EOF
-Usage: factor OPERATION TARGET1 ... TARGETn  
+Usage: git factor OPERATION TARGET1 ... TARGETn  
 
 OPERATIONS:
   - sync:
