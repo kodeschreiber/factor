@@ -6,10 +6,11 @@ Here's a simple layout diagram:
 
 ![factor_diagram](factor.png)
 
-Factor only requires one thing:
-1. The place that you wish to setup your .factor folder must containe a `factor.conf` file.
+Factor only requires a few things:
+1. A `factor.conf` file in the target repository.
+2. Commands: rsync, git
 
-When running the `factor` command, you must be in the target directory containing this file or set the `FACTOR_FILE` environment variable to the path of the `factor.conf` file.
+When running the `git factor` command, you must be in the target directory containing this file or set the `FACTOR_FILE` environment variable to the path of the `factor.conf` file.
 
 ---
 
@@ -31,6 +32,16 @@ Here are the rules to the CONF file:
 4. `env` is a space-separated list of section names in the `factor.conf`. Add entries to those sections; this will automatically export shell variables for your build scripts (no need to put 'export')
 5. `prefix` is the final destination of your resource's build. It will given as the variable `PREFIX` in your build script. This value changes if `isolate` is defined. You may also use the `%git%` variable to specify the path your GIT project root.
 6. `script` is the location of the buildscript to execute in the module's directory. The scipt must be set as execuatble. You may use the `%git%` syntax to specifiy the location.
+
+You may also define enviroment variables in sections in the `factor.conf`. Here's what that can look like:
+```
+[environment_name]
+PATH=/bin:/usr/bin
+CUSTOM_VAR=foo
+CC=/usr/bin/gcc
+```
+
+Note that you do not need to put the `export` keyword. This is done automatically.
 
 ## Command Usage:
 git factor OPERATION TARGET1 ... TARGETn  
@@ -66,10 +77,11 @@ OPERATIONS:
 ## Installation
 Simply run `make install` to install the binary. To set a custom path, do `make PREFIX='<path>' install`
 
+---
+
 ### A note on `isolate`
 `isolate` is an experimental command used for special circumstances where a
-build may require absolute/system-root paths to install correctly. Here are
-the options:
+build may require absolute/system-root paths to install correctly. Here is the usage:
 
 ```
 isolate delta_dir [OPTIONS] CMD ARG1 ... ARGN
