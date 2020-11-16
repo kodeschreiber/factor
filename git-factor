@@ -63,7 +63,14 @@ _get_resource() {
   source <(_get_vars "${1}" | sed 's/\(.*\)/f_\1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/='/;s/\$/'/")
   if [ -z "${f_url}" ]; then _error "No url defined for ${1}"; fi
   if [ -z "${f_prefix}" ]; then _error "No prefix provided for ${1}"; fi
-  if [ -z "${f_script}" ]; then _error "No script defined for ${1}"; fi
+  if [ -z "${f_script}" ]; then
+    ffiles="$(find "${HERE}" | grep "${1}.factor" | wc -l)"
+    if [ $ffiles -lt 1 ]; then
+      _error "No script defined or ${1}.factor files located in GIT root"
+    elif [ $ffiles -gt 1 ]; then
+      _error "Multiple ${1}.factor files located. Please define the one you wish to use."
+    fi
+  fi
   f_tag="${f_tag:-master}"
   f_moddir="${FACTDIR}/${1}"
   f_lock="${f_moddir}/lock"
