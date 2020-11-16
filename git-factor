@@ -141,7 +141,7 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  if [ 
+  if [ \
     $deprebuilt -ne 1 -a \
     -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a \
