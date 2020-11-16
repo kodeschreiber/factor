@@ -72,6 +72,11 @@ _get_resource() {
     fi
     f_script="$(find "${HERE}" | grep "${1}.factor")"
   fi
+  f_quote="'"
+  if [ "$(git config 'core.factor.safe_variables')" == "false" ]; then
+    f_quote='"'
+  fi
+  
   f_tag="${f_tag:-master}"
   f_moddir="${FACTDIR}/${1}"
   f_lock="${f_moddir}/lock"
@@ -86,6 +91,9 @@ _get_resource() {
 _global_sync() {
   mkdir -p "${FACTDIR}"
   echo "." > "${FACTDIR}/.gitignore"
+  if [ -z "$(git config 'core.factor.safe_variables')" ]; then
+    git config 'core.factor.safe_variables' true
+  fi
 }
 
 # _sync <resource>
@@ -155,7 +163,7 @@ _build() {
 
     export PREFIX="${f_cache}"
     while read envi; do
-      source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/='/;s/\$/'/")
+      source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/=${f_quote}/;s/\$/${f_quote}/")
     done < <(echo "${f_env}" | sed 's/ /\n/g')
     env -C "${f_module}" "${f_script}"
   )
