@@ -178,7 +178,8 @@ _build() {
 # _compose <resource>
 _compose() {
   $0 build "${1}"
-  if [ $? -ne 11 ]; then _error "Failed to build "${1}""; fi
+  res=$?
+  if [ $res -ne 11 -o $res -ne 12 ]; then _error "Failed to build "${1}""; fi
   _get_resource "${1}"
   while read req; do
     if [ -z "${req}" ]; then
