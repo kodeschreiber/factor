@@ -70,6 +70,7 @@ _get_resource() {
     elif [ $ffiles -gt 1 ]; then
       _error "Multiple ${1}.factor files located. Please define the one you wish to use."
     fi
+    f_script="$(find "${HERE}" | grep "${1}.factor")"
   fi
   f_tag="${f_tag:-master}"
   f_moddir="${FACTDIR}/${1}"
