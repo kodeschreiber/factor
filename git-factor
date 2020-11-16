@@ -174,7 +174,7 @@ _compose() {
     fi
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   mkdir -p "${f_prefix}"
-  rsync -av "${f_cache}/" "${f_prefix}/"
+  rsync -a --delete "${f_cache}/" "${f_prefix}/"
 }
 
 _clean() {
