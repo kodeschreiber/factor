@@ -73,7 +73,7 @@ _get_resource() {
     f_script="$(find "${HERE}" | grep "${1}.factor")"
   fi
   f_quote="'"
-  if [ "$(git config 'core.factor.safevars')" == "false" ]; then
+  if [ "$(git config 'factor.safevars')" == "false" ]; then
     f_quote='"'
   fi
   
@@ -91,8 +91,8 @@ _get_resource() {
 _global_sync() {
   mkdir -p "${FACTDIR}"
   echo "." > "${FACTDIR}/.gitignore"
-  if [ -z "$(git config 'core.factor.safevars')" ]; then
-    git config 'core.factor.safevars' true
+  if [ -z "$(git config 'factor.safevars')" ]; then
+    git config 'factor.safevars' true
   fi
 }
 
