@@ -146,8 +146,8 @@ _build() {
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
       _sync_cache_to_build
-      exit 12; 
-    fi
+    exit 12; 
+  fi
 
   (
     cd "${f_module}"
@@ -212,7 +212,6 @@ while [ $# -gt 0 ]; do
   case "${OPER}" in
     sync) _sync "${1}"; ;;
     build) _build "${1}"; exit $?; ;;
-    compose) _compose "${1}"; ;;
     clean) _clean "${1}"; ;;
     prune) _prune "${1}"; ;;
     *) _usage; exit 1; ;;
