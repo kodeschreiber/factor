@@ -47,12 +47,9 @@ OPERATIONS:
       variables and run the buildscript. Otherwise, create a bind-mount for
       the root and module directories in the cache, chroot into the cache,
       and execute the buildscript. Absolute paths defined in the PATH and
-      LD_LIBRARY_PATH are converted for the chroot environment.
-      
-  - compose:
-      Run 'build' on the module. Then copy the contents of the cache into
-      the 'prefix' directory.
-    
+      LD_LIBRARY_PATH are converted for the chroot environment. Finally, 
+      copy the contents of the cache into the 'prefix' directory.
+
   - clean:
       Remove the modules '.factor' directory
    
@@ -179,14 +176,6 @@ _build() {
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
   return 11
-}
-
-# _compose <resource>
-_compose() {
-  $0 build "${1}"
-  res=$?
-  if [ $res -ne 11 -a $res -ne 12 ]; then _error "Failed to build "${1}""; fi
-
 }
 
 _clean() {

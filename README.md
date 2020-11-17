@@ -61,11 +61,8 @@ OPERATIONS:
       variables and run the buildscript. Otherwise, create a bind-mount for
       the root and module directories in the cache, chroot into the cache,
       and execute the buildscript. Absolute paths defined in the PATH and
-      LD_LIBRARY_PATH are converted for the chroot environment.
-      
-  - compose:
-      Run 'build' on the module. Then copy the contents of the cache into
-      the 'prefix' directory.
+      LD_LIBRARY_PATH are converted for the chroot environment. Finally, 
+      copy the contents of the cache into the 'prefix' directory.
     
   - clean:
       Remove the modules '.factor' directory
@@ -76,6 +73,30 @@ OPERATIONS:
 
 ## Installation
 Simply run `make install` to install the binary. To set a custom path, do `make PREFIX='<path>' install`
+
+---
+
+## Build Variables
+The following variables are injected to every buildscript's environment:
+
+PREFIX_CACHE - Path to the `<gitfolder>/.factor/<module>/cache` directory.
+PREFIX_BUILD - Path defined by the `prefix` variable in the factor.conf
+
+---
+
+## Configuration
+You may set the following varibles using the `git config` command:
+
+factor.safevars true|false - This sets the shell quotes used on the environment
+                             variables pulled in when running a build script.
+                             The default is *false*, which uses single quotes.
+                             Setting to *true* will instead use double quotes.
+                             This is important because you may wish to prevent
+                             arbitrary execution/interpretation from the
+                             variables set within the factor.conf. Using double
+                             quotes will allow any values set to be immediately
+                             interpreted upon addition to the buildscript
+                             environment.
 
 ---
 
