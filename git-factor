@@ -23,6 +23,11 @@ _error() {
   exit 10
 }
 
+_sync_cache_to_build() {
+  mkdir -p "${f_prefix}"
+  rsync -a "${f_cache}/" "${f_prefix}/"
+}
+
 _usage() {
   cat <<EOF
 Usage: git factor OPERATION TARGET1 ... TARGETn  
@@ -141,12 +146,11 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  if [ \
-    $deprebuilt -ne 1 -a \
-    -d "${f_cache}" -a \
-    "${curr_hash}" == "${lock_hash}" -a \
-    "${f_tag}" == "${lock_tag}" \
-    ]; then exit 12; fi
+  if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
+    "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
+      _sync_cache_to_build
+      exit 12; 
+    fi
 
   (
     cd "${f_module}"
@@ -171,6 +175,7 @@ _build() {
   
   if [ $? -ne 0 ]; then _error "Failed to build package ${1}"; fi
 
+  _sync_cache_to_build
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
   return 11
@@ -181,18 +186,7 @@ _compose() {
   $0 build "${1}"
   res=$?
   if [ $res -ne 11 -a $res -ne 12 ]; then _error "Failed to build "${1}""; fi
-  _get_resource "${1}"
-  while read req; do
-    if [ -z "${req}" ]; then
-      continue
-    fi
-    $0 compose "${req}"
-    if [ $? -ne 0 ]; then
-      _error "Requirement '${req}' for resource '${1}' failed to compose"
-    fi
-  done < <(echo "${f_requires}" | sed 's/ /\n/g')
-  mkdir -p "${f_prefix}"
-  rsync -a "${f_cache}/" "${f_prefix}/"
+
 }
 
 _clean() {
