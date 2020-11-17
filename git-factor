@@ -108,7 +108,7 @@ _sync() {
   if [ ! -f "${f_lock}" ]; then touch "${f_lock}"; fi
   if [ ! -f "${f_tag}" ]; then touch "${f_tagfile}"; fi
   if ! grep -qs "\[submodule \"${1}\"\]" "${HERE}/.gitmodules"; then
-    git submodule add --name "${1}" "${f_url}" "${f_rmodule}"
+    git submodule add --force --name "${1}" "${f_url}" "${f_rmodule}"
   fi
   
   git config -f "${HERE}/.gitmodules" "submodule.${1}.branch" "${f_tag}"
