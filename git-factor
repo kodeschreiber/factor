@@ -161,8 +161,8 @@ _build() {
     git reset --hard
     git clean -xfd
 
-    export PREFIX="${f_cache}"
-    export INSTDIR="${f_prefix}"
+    export PREFIX_CACHE="${f_cache}"
+    export PREFIX_BUILD="${f_prefix}"
     while read envi; do
       source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/=${f_quote}/;s/\$/${f_quote}/")
     done < <(echo "${f_env}" | sed 's/ /\n/g')
