@@ -94,7 +94,7 @@ done
 
 mount -t overlay overlay -o lowerdir=${lowers},upperdir=${delta_dir},workdir=${wkdir} "${mntdir}"
 while read bnd; do
-  mkdir -p "${psrtdir}${bnd}"
-  mount --bind -o ro "${bnd}" "${psrtdir}${bnd}"
+#   mkdir -p "${psrtdir}${bnd}"
+  mount --bind -o ro "${bnd}" "${mntdir}${bnd}"
 done < "${binds}"
 chroot "${mntdir}" $@
