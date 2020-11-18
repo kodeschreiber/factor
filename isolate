@@ -2,6 +2,19 @@
 
 # USAGE: isolate delta_dir [OPTIONS] CMD ARG1 ... ARGN
 
+_cleaner() {
+  if mountpoint -q "${mntdir}"; then
+    umount "${mntdir}"
+  fi
+  while read bnd; do
+    if mountpoint -q "${psrtdir}${bnd}"; then
+      umount "${psrtdir}${bnd}"
+    fi
+  done < "${binds}"
+  rm -rf "${tmpdir}"
+}
+trap _cleaner ERR EXIT
+
 # _error <msg>
 _error() {
   echo "[ISOLATE] Error: $@" >&2
@@ -47,13 +60,20 @@ if ! ( lsmod | grep -qs overlay ); then
   fi
 fi
 
-delta_dir="${1}"; shift
+delta_dir="$(realpath "${1}")"; shift
 tmpdir="$(dirname "$(realpath "${delta_dir}")")/.isotmp"
 wkdir="${tmpdir}/work"
 mntdir="${tmpdir}/mnt"
 psrtdir="${tmpdir}/root"
 binds="${tmpdir}/binds"
 lowers="${psrtdir}"
+
+if [ ! -d "${delta_dir}" ]; then
+  _usage
+  _error "Delta directory invalid"
+fi
+
+mkdir -p "${tmpdir}"
 
 touch "${binds}"
 while [ "${1}" == "-l" -o "${1}" == "-b" ]; do
@@ -75,10 +95,5 @@ while read bnd; do
   mount --bind -o ro "${bnd}" "${psrtdir}${bnd}"
 done < "${binds}"
 mkdir -p "${wkdir}" "${mntdir}" "${psrtdir}"
-mount -t overlay overlay -olowerdir=${tool_dirs},upperdir=${delta_dir},workdir=${wkdir} "${mntdir}"
+echo mount -t overlay overlay -o lowerdir=${lowers},upperdir=${delta_dir},workdir=${wkdir} "${mntdir}"
 chroot "${mntdir}" $@
-umount "${mntdir}"
-while read bnd; do
-  umount "${psrtdir}${bnd}"
-done < "${binds}"
-rm -rf "${psrtdir}"
