@@ -92,10 +92,9 @@ while [ "${1}" == "-l" -o "${1}" == "-b" ]; do
   shift
 done
 
+mount -t overlay overlay -o lowerdir=${lowers},upperdir=${delta_dir},workdir=${wkdir} "${mntdir}"
 while read bnd; do
   mkdir -p "${psrtdir}${bnd}"
   mount --bind -o ro "${bnd}" "${psrtdir}${bnd}"
 done < "${binds}"
-mkdir -p "${wkdir}" "${mntdir}" "${psrtdir}"
-mount -t overlay overlay -o lowerdir=${lowers},upperdir=${delta_dir},workdir=${wkdir} "${mntdir}"
 chroot "${mntdir}" $@
