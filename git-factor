@@ -101,6 +101,7 @@ _global_sync() {
 # _sync <resource>
 _sync() {
   if [ ! -f "${FACTOR_FILE}" ]; then
+    echo "DEBUG: ${FACTOR_FILE}"
     _error "Could not find a factor.conf file in this repository"
   fi
   _global_sync
