@@ -6,11 +6,13 @@ _cleaner() {
   if mountpoint -q "${mntdir}"; then
     umount "${mntdir}"
   fi
-  while read bnd; do
-    if mountpoint -q "${psrtdir}${bnd}"; then
-      umount "${psrtdir}${bnd}"
-    fi
-  done < "${binds}"
+  if [ -d "${tmpdir}" ]; then
+    while read bnd; do
+      if mountpoint -q "${psrtdir}${bnd}"; then
+        umount "${psrtdir}${bnd}"
+      fi
+    done < "${binds}"
+  fi
   rm -rf "${tmpdir}"
 }
 trap _cleaner ERR EXIT
