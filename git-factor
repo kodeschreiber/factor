@@ -116,7 +116,7 @@ _sync() {
   
   git config -f "${HERE}/.gitmodules" "submodule.${1}.branch" "${f_tag}"
   git config -f "${HERE}/.gitmodules" "submodule.${1}.url" "${f_url}"
-  if [ "$(find "${f_module}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
+  if [ "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
     git submodule update --init --force "${f_module}"
   else
     git submodule update --force "${f_module}"
