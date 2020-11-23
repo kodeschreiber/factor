@@ -49,13 +49,11 @@ _msg() {
 
 _def_config() {
   mkdir -p "${FACTDIR}"
-  cat <<EOF >"${FACTDIR}/config"
-[factor]
-  saveenv = true
-  verbose = 1
-  prefix = %git%
-  env = %none%
-EOF
+  touch "${FACTDIR}/config"
+  git config -f "${FACTDIR}/config" --add --bool factor.saveenv true
+  git config -f "${FACTDIR}/config" --add --int factor.verbose 1
+  git config -f "${FACTDIR}/config" --add factor.prefix "%git%"
+  git config -f "${FACTDIR}/config" --add factor.env "%none%"
 }
 
 # _get_vars <resource>
@@ -267,7 +265,11 @@ _clean() {
 
 # _config <key> <val>
 _config() {
-  git config -f "${FACTDIR}/config" "${1}" "${2}"
+  if [ $# -lt 2 ]; then
+    git config -f "${FACTDIR}/config" "${1}"
+  else
+    git config -f "${FACTDIR}/config" "${1}" "${2}"
+  fi
 }
 
 # _prune <resource>
