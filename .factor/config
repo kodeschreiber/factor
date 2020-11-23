@@ -1,0 +1,5 @@
+[factor]
+  saveenv = true
+	verbose = 
+  prefix = %git%
+  env = %none%

@@ -114,7 +114,3 @@ The following variables are injected to every buildscript's environment:
 - PREFIX_CACHE - Path to the `<gitfolder>/.factor/<module>/cache` directory.
 - PREFIX_BUILD - Path defined by the `prefix` variable in the factor.conf
 - GIT_ROOT - Path to the parent git directories root.
-
-
-
-

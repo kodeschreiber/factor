@@ -14,6 +14,7 @@ _msg() {
   BLUE='\033[1;34m'
   NC='\033[0m' # No Color
   lvl="$(_config 'factor.verbose')"
+  lvl="${lvl:-1}"
   case "${1}" in
     ACTION)
       if [ $lvl -ge 1 ]; then echo -e "- ${2}" >&3; fi
@@ -46,6 +47,17 @@ _msg() {
 }
 ###############
 
+_def_config() {
+  mkdir -p "${FACTDIR}"
+  cat <<EOF >"${FACTDIR}/config"
+[factor]
+  saveenv = true
+  verbose = 1
+  prefix = %git%
+  env = %none%
+EOF
+}
+
 # _get_vars <resource>
 _get_vars() {
   @d "Getting settings for resource '${1}'"
@@ -70,7 +82,7 @@ _sync_cache_to_build() {
 _usage() {
   @d "Printing usage information"
   cat <<'EOF'
-%doc%   
+%doc%
 EOF
 }
 
@@ -118,7 +130,7 @@ _global_sync() {
   
   @d "Ensuring saveenv variable"
   if [ -z "$(_config 'factor.safeenv')" ]; then
-    _config 'factor.safevars' true
+    _config 'factor.safeenv' true
   fi
   
   @d "Ensuring verbose variable"
@@ -255,7 +267,6 @@ _clean() {
 
 # _config <key> <val>
 _config() {
-  @d "Configuring: ${@}"
   git config -f "${FACTDIR}/config" "${1}" "${2}"
 }
 
@@ -286,6 +297,10 @@ _prune() {
   $0 clean "${1}"
   _rem_vars "${1}" "${FACTOR_FILE}"
 }
+
+if [ ! -f "${FACTDIR}/config" ]; then
+  _def_config
+fi
 
 if [ $# -lt 2 ]; then
   _usage
