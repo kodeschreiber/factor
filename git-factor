@@ -69,34 +69,8 @@ _sync_cache_to_build() {
 
 _usage() {
   @d "Printing usage information"
-  cat <<EOF
-Usage: git factor OPERATION TARGET1 ... TARGETn  
-
-OPERATIONS:
-  - sync:
-      Firstly ensures that the '.factor' directory exists. Then, ensures the
-      basic directory structure for the module is present. Git submodule is 
-      then used to add/update the module.
-      
-  - build:
-      Run 'sync' on the module. Then, check if the build needs to continue;
-      if the tag or buildscript change, or if the 'cache' directory for the
-      module is missing, then proceed, otherwise, exit 11. Attempt to build
-      each prerequiste. If successful, create cache directory and clean the
-      git module directory. If isolation is not set, set the environment
-      variables and run the buildscript. Otherwise, create a bind-mount for
-      the root and module directories in the cache, chroot into the cache,
-      and execute the buildscript. Absolute paths defined in the PATH and
-      LD_LIBRARY_PATH are converted for the chroot environment. Finally, 
-      copy the contents of the cache into the 'prefix' directory.
-
-  - clean:
-      Remove the modules '.factor' directory
-   
-  - prune:
-      Remove the submodule. Then, run 'clean' on it. Then remove the entry
-      from the 'factor.conf' file.
-   
+  cat <<'EOF'
+%doc%   
 EOF
 }
 
