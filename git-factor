@@ -242,7 +242,7 @@ _build() {
     @d "Creating environment for '${1}'"
     export PREFIX_CACHE="${f_cache}"
     export PREFIX_BUILD="${f_prefix}"
-    export GIT_ROOT="${git rev-parse --show-toplevel}"
+    export GIT_ROOT="$(git rev-parse --show-toplevel)"
     while read envi; do
       source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/=${f_quote}/;s/\$/${f_quote}/")
     done < <(echo "${f_env}" | sed 's/ /\n/g')
