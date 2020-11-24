@@ -49,11 +49,11 @@ _msg() {
 
 _def_config() {
   mkdir -p "${FACTDIR}"
-  touch "${FACTDIR}/config"
-  git config -f "${FACTDIR}/config" --add --bool factor.saveenv true
-  git config -f "${FACTDIR}/config" --add --int factor.verbose 1
-  git config -f "${FACTDIR}/config" --add factor.prefix "%git%"
-  git config -f "${FACTDIR}/config" --add factor.env "%none%"
+  touch "${GIT_ROOT}/.factorconfig"
+  git config -f "${GIT_ROOT}/.factorconfig" --add --bool factor.saveenv true
+  git config -f "${GIT_ROOT}/.factorconfig" --add --int factor.verbose 1
+  git config -f "${GIT_ROOT}/.factorconfig" --add factor.prefix "%git%"
+  git config -f "${GIT_ROOT}/.factorconfig" --add factor.env "%none%"
 }
 
 # _get_vars <resource>
@@ -270,9 +270,9 @@ _clean() {
 # _config <key> <val>
 _config() {
   if [ -z "${2}" ]; then
-    git config -f "${FACTDIR}/config" "${1}"
+    git config -f "${GIT_ROOT}/.factorconfig" "${1}"
   else
-    git config -f "${FACTDIR}/config" "${1}" "${2}"
+    git config -f "${GIT_ROOT}/.factorconfig" "${1}" "${2}"
   fi
 }
 
@@ -304,7 +304,7 @@ _prune() {
   _rem_vars "${1}" "${FACTOR_FILE}"
 }
 
-if [ ! -f "${FACTDIR}/config" ]; then
+if [ ! -f "${GIT_ROOT}/.factorconfig" ]; then
   _def_config
 fi
 
