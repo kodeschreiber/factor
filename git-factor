@@ -178,9 +178,9 @@ _sync() {
   @d "Updating '${1}' if its module directory is empty"
   if [ ! -d "${f_rmodule}" ]; then
     mkdir -p "${f_rmodule}"
-    git submodule update --init --force "${1}" 2>&1 >/dev/null
+    git submodule update --init --force "${f_rmodule}" 2>&1 >/dev/null
   elif [ "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
-    git submodule update --init --force "${1}" 2>&1 >/dev/null
+    git submodule update --init --force "${f_rmodule}" 2>&1 >/dev/null
   else
     git submodule update --force "${f_rmodule}" 2>&1 >/dev/null
   fi
