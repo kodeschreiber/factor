@@ -226,6 +226,7 @@ _build() {
   if [ -d "${f_cache}" ]; then rm -rf "${f_cache}"; fi
   if [ ! -d "${f_cache}" ]; then mkdir -p "${f_cache}"; fi
   (
+    GIT_ROOT="$(git rev-parse --show-toplevel)"
     cd "${f_module}"
     
     @d "Ensure that we are in '${1}' and not hte parent"
@@ -240,7 +241,7 @@ _build() {
     @d "Creating environment for '${1}'"
     export PREFIX_CACHE="${f_cache}"
     export PREFIX_BUILD="${f_prefix}"
-    export GIT_ROOT="$(git rev-parse --show-toplevel)"
+    export GIT_ROOT
     while read envi; do
       source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/=${f_quote}/;s/\$/${f_quote}/")
     done < <(echo "${f_env}" | sed 's/ /\n/g')
