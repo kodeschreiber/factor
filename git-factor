@@ -126,25 +126,25 @@ _global_sync() {
   @d "Adding .gitignore file"
   echo "." > "${FACTDIR}/.gitignore"
   
-  @d "Ensuring saveenv variable"
-  if [ -z "$(_config 'factor.safeenv')" ]; then
-    _config 'factor.safeenv' true
-  fi
+#   @d "Ensuring saveenv variable"
+#   if [ -z "$(_config 'factor.safeenv')" ]; then
+#     _config 'factor.safeenv' true
+#   fi
   
-  @d "Ensuring verbose variable"
-  if [ -z "$(_config 'factor.verbose')" ]; then
-    _config 'factor.verbose' 1
-  fi
+#   @d "Ensuring verbose variable"
+#   if [ -z "$(_config 'factor.verbose')" ]; then
+#     _config 'factor.verbose' 1
+#   fi
   
-  @d "Ensuring prefix variable"
-  if [ -z "$(_config 'factor.prefix')" ]; then
-    _config 'factor.prefix' '%git%'
-  fi
+#   @d "Ensuring prefix variable"
+#   if [ -z "$(_config 'factor.prefix')" ]; then
+#     _config 'factor.prefix' '%git%'
+#   fi
   
-  @d "Ensuring env variable"
-  if [ -z "$(_config 'factor.env')" ]; then
-    _config 'factor.env' '%none%'
-  fi
+#   @d "Ensuring env variable"
+#   if [ -z "$(_config 'factor.env')" ]; then
+#     _config 'factor.env' '%none%'
+#   fi
 }
 
 # _sync <resource>
