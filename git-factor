@@ -222,7 +222,6 @@ _build() {
   (
     cd "${f_module}"
     git fetch --all
-    git pull
     git checkout "${f_tag}"
   )
   
