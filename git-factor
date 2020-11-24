@@ -266,10 +266,13 @@ _clean() {
 # _config <key> <val>
 _config() {
   if [ $# -lt 2 ]; then
+    echo Hello
     git config -f "${FACTDIR}/config" "${1}"
   else
+    echo There
     git config -f "${FACTDIR}/config" "${1}" "${2}"
   fi
+  echo lolz
 }
 
 # _prune <resource>
