@@ -152,7 +152,6 @@ _sync() {
   @a "Synchronizing '${1}'"
   @d "Checking for factor.conf"
   if [ ! -f "${FACTOR_FILE}" ]; then
-    echo "DEBUG: ${FACTOR_FILE}"
     @e "Could not find a factor.conf file in this repository"
   fi
   
@@ -308,6 +307,8 @@ _prune() {
 if [ ! -f "${FACTDIR}/config" ]; then
   _def_config
 fi
+
+@d "You are currently building in $(pwd) with GIT: ${GIT_ROOT}"
 
 if [ $# -lt 2 ]; then
   _usage
