@@ -167,7 +167,7 @@ _sync() {
   
   @d "Check if '${1}' need to be indexed"
   if ! grep -qs "\[submodule \"${1}\"\]" "${HERE}/.gitmodules"; then
-    git submodule add --force --name "${1}" "${f_url}" "${f_rmodule}"
+    git submodule add --force --name "${1}" "${f_url}" "${f_rmodule}" 2>&1 >/dev/null
   fi
   
   @d "Updating the url and tag of '${1}'"
@@ -176,16 +176,16 @@ _sync() {
   
   @d "Updating '${1}' if its module directory is empty"
   if [ "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
-    git submodule update --init --force "${f_module}"
+    git submodule update --init --force "${f_module}" 2>&1 >/dev/null
   else
-    git submodule update --force "${f_module}"
+    git submodule update --force "${f_module}" 2>&1 >/dev/null
   fi
 }
 
 # _build <resource>
 _build() {
   @d "Syncing '${1}'"
-  $0 sync "${1}" 2>&1 >/dev/null
+  $0 sync "${1}"
   @einz "Cannot build ${1}"
   _get_resource "${1}"
 
