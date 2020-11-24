@@ -175,7 +175,7 @@ _sync() {
   git config -f "${HERE}/.gitmodules" "submodule.${1}.url" "${f_url}"
   
   @d "Updating '${1}' if its module directory is empty"
-  if [ "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
+  if [ ! -d "${f_rmodule}" -o "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
     git submodule update --init --force "${f_module}" 2>&1 >/dev/null
   else
     git submodule update --force "${f_module}" 2>&1 >/dev/null
