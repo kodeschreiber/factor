@@ -221,7 +221,8 @@ _build() {
   @d "Fetching and setting the tag for '${1}'"
   (
     cd "${f_module}"
-    git fetch --all 
+    git fetch --all
+    git pull
     git checkout "${f_tag}"
   )
   
