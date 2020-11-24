@@ -173,6 +173,7 @@ _sync() {
   @d "Updating the url and tag of '${1}'"
   git config -f "${HERE}/.gitmodules" "submodule.${1}.branch" "${f_tag}"
   git config -f "${HERE}/.gitmodules" "submodule.${1}.url" "${f_url}"
+  git config -f "${HERE}/.gitmodules" "submodule.${1}.path" "${f_moddir}"
   
   @d "Updating '${1}' if its module directory is empty"
   if [ ! -d "${f_rmodule}" -o "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
