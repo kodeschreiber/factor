@@ -265,7 +265,11 @@ _clean() {
 
 # _config <key> <val>
 _config() {
-  git config -f "${FACTDIR}/config" "${1}" "${2}"
+  if [ -z "${2}" ]; then
+    git config -f "${FACTDIR}/config" "${1}"
+  else
+    git config -f "${FACTDIR}/config" "${1}" "${2}"
+  fi
 }
 
 # _prune <resource>
