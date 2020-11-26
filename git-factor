@@ -10,9 +10,6 @@ OPER="${1}"
 
 # _msg <type> <info>
 _msg() {
-  RED='\033[0;31m'
-  BLUE='\033[1;34m'
-  NC='\033[0m' # No Color
   lvl="$(_config 'factor.verbose')"
   lvl="${lvl:-1}"
   case "${1}" in
@@ -20,61 +17,26 @@ _msg() {
       if [ $lvl -ge 1 ]; then echo -e "- ${2}" >&3; fi
     ;;
     ERROR)
-      if [ $lvl -ge 1 ]; then echo -e "${RED}! ${2}${NC}" >&4; exit 10; fi
+      if [ $lvl -ge 1 ]; then echo -e "\033[0;31m! ${2}\033[0m" >&4; exit 10; fi
     ;;
     DEBUG)
-      if [ $lvl -ge 2 ]; then echo -e "${BLUE}? ${2}${NC}" >&5; fi
+      if [ $lvl -ge 2 ]; then echo -e "\033[1;34m? ${2}\033[0m" >&5; fi
     ;;
   esac
 }
 
 ### Aliases ###
-@a() {
-  _msg ACTION "${1}"
-}
-
-@e() {
-  _msg ERROR "${1}"
-}
-
-@d() {
-  _msg DEBUG "${1}"
-}
-
-# error if no zero
-@einz() {
-  if [ $? -ne 0 ]; then @e "${1}"; fi
-}
+@a() { _msg ACTION "${1}"; }
+@e() { _msg ERROR "${1}"; }
+@d() { _msg DEBUG "${1}"; }
+@einz() { if [ $? -ne 0 ]; then @e "${1}"; fi; }
 ###############
-
-_def_config() {
-  mkdir -p "${FACTDIR}"
-  touch "${GIT_ROOT}/.factorconfig"
-  git config -f "${GIT_ROOT}/.factorconfig" --add --bool factor.saveenv true
-  git config -f "${GIT_ROOT}/.factorconfig" --add --int factor.verbose 1
-  git config -f "${GIT_ROOT}/.factorconfig" --add factor.prefix "%git%"
-  git config -f "${GIT_ROOT}/.factorconfig" --add factor.env "%none%"
-}
 
 # _get_vars <resource>
 _get_vars() {
   @d "Getting settings for resource '${1}'"
   cat "${FACTOR_FILE}" | \
   sed -n "/\[${1}\]/,/^\s*\[*[a-zA-Z0-9_-]*\]*$/"'!d'"; //d; /^\s*#/d; s/^\s*\([a-zA-Z][a-zA-Z0-9]*=.*\)/\1/; s@%git%@${GIT_ROOT}@; p"
-}
-
-# _rem_vars <resource> <file>
-_rem_vars() {
-  @d "Removing section for resource '${1}'"
-  sed -i "/\[${1}\]/,/^\s*\[*[a-zA-Z0-9_-]*\]*$/{/\[${1}\]/d;/^\s*\[*[a-zA-Z0-9_-]*\]*$/"'!d'"}" "${2}"
-  @einz "Failed to prune resource '${1}' from factor.conf"
-}
-
-_sync_cache_to_build() {
-  @d "Creating prefix directory for '${1}'"
-  mkdir -p "${f_prefix}"
-  @d "Copying cache to prefix for '${1}'"
-  rsync -a "${f_cache}/" "${f_prefix}/"
 }
 
 _usage() {
@@ -125,26 +87,6 @@ _global_sync() {
   mkdir -p "${FACTDIR}"
   @d "Adding .gitignore file"
   echo "." > "${FACTDIR}/.gitignore"
-  
-#   @d "Ensuring saveenv variable"
-#   if [ -z "$(_config 'factor.safeenv')" ]; then
-#     _config 'factor.safeenv' true
-#   fi
-  
-#   @d "Ensuring verbose variable"
-#   if [ -z "$(_config 'factor.verbose')" ]; then
-#     _config 'factor.verbose' 1
-#   fi
-  
-#   @d "Ensuring prefix variable"
-#   if [ -z "$(_config 'factor.prefix')" ]; then
-#     _config 'factor.prefix' '%git%'
-#   fi
-  
-#   @d "Ensuring env variable"
-#   if [ -z "$(_config 'factor.env')" ]; then
-#     _config 'factor.env' '%none%'
-#   fi
 }
 
 # _sync <resource>
@@ -213,7 +155,10 @@ _build() {
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
     @d "Rebuild not required for '${1}'"
-    _sync_cache_to_build
+    @d "Creating prefix directory for '${1}'"
+    mkdir -p "${f_prefix}"
+    @d "Copying cache to prefix for '${1}'"
+    rsync -a "${f_cache}/" "${f_prefix}/"
     exit 12
   fi
 
@@ -254,8 +199,11 @@ _build() {
   
   @einz "Failed to build package ${1}"
 
+  @d "Creating prefix directory for '${1}'"
+  mkdir -p "${f_prefix}"
+  @d "Copying cache to prefix for '${1}'"
+  rsync -a "${f_cache}/" "${f_prefix}/"
   @d "Updaing the lock and tag"
-  _sync_cache_to_build
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
   return 11
@@ -267,63 +215,9 @@ _clean() {
   rm -rf "${f_moddir}"
 }
 
-# _config <key> <val>
-_config() {
-  if [ -z "${2}" ]; then
-    git config -f "${GIT_ROOT}/.factorconfig" "${1}"
-  else
-    git config -f "${GIT_ROOT}/.factorconfig" "${1}" "${2}"
-  fi
-}
-
-# _prune <resource>
-# There could be potentially a better way using the name "${1}"
-# as opposed to the modules path at "${f_module}"
-_prune() {
-  @a "Pruning '${1}'"
-  _get_resource "${1}"
-  @d "Deinit for '${1}'"
-  git submodule deinit -f "${f_module}"
-  @d "Removing from index for '${1}'"
-  git rm -f "${f_module}"
-  _rem_vars "submodule \"${1}\"" "${HERE}/.gitmodules"
-  @d "Rebuilding index"
-  git add "${HERE}/.gitmodules"
-  @d "Removing any cache in index for '${1}'"
-  git rm --cached "${f_module}"
-  @d "Commiting changes"
-  git commit -m "Removed submodule ${1}"
-  @d "Removing actual cache for '${1}'"
-  rm -rf "${HERE}/.git/modules/${1}"
-  @d "Removing .factor directory for '${1}'"
-  rm -rf "${f_module}"
-  @d "Indexing"
-  git add .
-  @d "Clean for '${1}'"
-  $0 clean "${1}"
-  _rem_vars "${1}" "${FACTOR_FILE}"
-}
-
 if [ ! -f "${GIT_ROOT}/.factorconfig" ]; then
   _def_config
 fi
 
 @d "You are currently building in $(pwd) with GIT: ${GIT_ROOT}"
 
-if [ $# -lt 2 ]; then
-  _usage
-  @e "Too few arguments"
-fi
-
-shift
-while [ $# -gt 0 ]; do
-  case "${OPER}" in
-    sync) _sync "${1}"; ;;
-    build) _build "${1}"; exit $?; ;;
-    clean) _clean "${1}"; ;;
-    prune) _prune "${1}"; ;;
-    config) _config "${1}" "${2}"; ;;
-    *) _usage; exit 1; ;;
-  esac
-  shift
-done

@@ -10,17 +10,14 @@ When running the `git factor` command, you must be in the target directory conta
 git factor OPERATION TARGET1 ... TARGETn  
 
 OPERATIONS:
-  - sync:
+  - build:
       Firstly ensures that the '.factor' directory exists. Then, ensures the
       basic directory structure for the module is present. Git submodule is 
-      then used to add/update the module.
-      
-  - build:
-      Run 'sync' on the module. Then, check if the build needs to continue;
-      if the tag or buildscript change, or if the 'cache' directory for the
-      module is missing, then proceed, otherwise, exit 11. Attempt to build
-      each prerequiste. If successful, create cache directory and clean the
-      git module directory. If isolation is not set, set the environment
+      then used to add/update the module. Then, check if the build needs to 
+      continue; if the tag or buildscript change, or if the 'cache' directory 
+      for the module is missing, then proceed, otherwise, exit 11. Attempt to 
+      build each prerequiste. If successful, create cache directory and clean 
+      the git module directory. If isolation is not set, set the environment
       variables and run the buildscript. Otherwise, create a bind-mount for
       the root and module directories in the cache, chroot into the cache,
       and execute the buildscript. Absolute paths defined in the PATH and
@@ -29,39 +26,6 @@ OPERATIONS:
     
   - clean:
       Remove the modules '.factor' directory
-   
-  - prune:
-      Remove the submodule. Then, run 'clean' on it. Then remove the entry
-      from the 'factor.conf' file.
-      
-  - config:
-      Behaves just like `git config`. Simply do: `git factor config 'key'` or `git factor config 'key' 'val'`
-      The following options exist:
-      - **factor.safeenv** true|false:
-             This sets the shell quotes used on the environment
-             variables pulled in when running a build script.
-             The default is *false*, which uses single quotes.
-             Setting to *true* will instead use double quotes.
-             This is important because you may wish to prevent
-             arbitrary execution/interpretation from the
-             variables set within the factor.conf. Using double
-             quotes will allow any values set to be immediately
-             interpreted upon addition to the buildscript
-             environment.
-      - **factor.verbose** 0|1|2:
-             Sets the amount of output that the program should
-             present. The default is 1. 0 produces no output,
-             1 shows output and errors, and 2 adds debugging.
-      - **factor.prefix** *string*:
-             This is the default prefix used for any unset
-             prefixes in the factor.conf. Setting the value
-             for eny entry in the conf overrides this value.
-      - **factor.env** *string*:
-             This is the default set of environments all
-             unset entries in the factor.conf will have.
-             Setting the value in the entry overrides this
-             value.
-
 ---
 
 ## Installation
@@ -70,23 +34,31 @@ Here's a simple layout diagram:
 ![factor_diagram](factor.png)
 
 Factor only requires a few things:
-1. A `factor.conf` file in the target repository.
+1. One or more '<filename>.ftr' files in the git repository
 2. Commands: rsync, git
 
 Simply run `make install` to install the binary. To set a custom path, do `make PREFIX='<path>' install`
 
 ---
 
-## The `factor.conf` file
-The conf file is structured as:
+## FTR files
+FTR files can be located anywhere in your git repository. FTR files are essentially
+`ini` files. In fact, they are desinged the same way that GIT configs are.
+  
+There are three types of sections you may use:
+  - entry
+  - exec
+  - env
+  
+Meta sections are structured as:
 ```
-[resource]
+[entry "name"]
   url=
   tag=
   requires=req1 ... reqN
   env=env1 ... envN
   prefix=
-  script=
+  exec=exec1 ... execN
 ```
 Here are the rules to the CONF file:
 1. `url` should specify the location to the target GIT repository. It is required.
@@ -96,7 +68,10 @@ Here are the rules to the CONF file:
 5. `prefix` is the final destination of your resource's build. It will given as the variable `PREFIX` in your build script. This value changes if `isolate` is defined. You may also use the `%git%` variable to specify the path your GIT project root.
 6. `script` is the location of the buildscript to execute in the module's directory. The scipt must be set as execuatble. You may use the `%git%` syntax to specifiy the location.
 
-You may also define enviroment variables in sections in the `factor.conf`. Here's what that can look like:
+Exec sections are free-form. They should be treated as parts to a script, later combined by
+reference in the `entry` section.
+  
+Env sections are structured as:
 ```
 [environment_name]
 PATH=/bin:/usr/bin
@@ -106,6 +81,13 @@ CC=/usr/bin/gcc
 
 Note that you do not need to put the `export` keyword. This is done automatically.
 
+There is one reserved section called `factor` used to define global properties for
+your repository. It is not required, but can be used to override default values as
+outlined below:
+```
+[factor]
+
+```
 ---
 
 ## Build Variables
