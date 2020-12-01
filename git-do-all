@@ -11,8 +11,17 @@ Options:
 -B|--bugfix - Update for a bug fix (default)
 -b|--build - Update for a build
 -p|--push - Push all unpushed changes
+-w|--without-tag - Do not auto-incrememnt tag this time
 
 EOF
+}
+
+_push() {
+  if [ $notag -eq 1 ]; then
+    git push origin "${branch}"
+  else
+    git push --atomic origin "${branch}" "${tag}"
+  fi
 }
 
 branch="$(git show-branch --current | sed 's/\[\(.*\)\].*/\1/')"
@@ -38,6 +47,7 @@ if [ $# -eq 2 ]; then
 fi
 
 force_push=0
+notag=0
 tag="$(git describe --tags | cut -d'-' -f1)"
 major="$(echo "${tag}" | cut -d'.' -f1)"
 minor="$(echo "${tag}" | cut -d'.' -f2)"
@@ -76,6 +86,10 @@ case $definc in
   -p|--push)
     force_push=1
   ;;
+  
+  -w|--without-tag)
+    notag=1
+  ;;
 esac
 
 if [ $force_push -eq 0 -a -z "$(git status --porcelain)" ]; then
@@ -88,12 +102,12 @@ tag="${major}.${minor}.${bugfix}.${build}"
 set -e
 
 if [ $force_push -eq 1 ]; then
-  git push --atomic origin "${branch}" "${tag}"
+  _push
   exit 0
 fi
 
 git add -A
 git commit -m "${@}"
 git tag "${tag}"
-git checkout "${branch}"
-git push --atomic origin "${branch}" "${tag}"
+# git checkout "${branch}"
+_push
