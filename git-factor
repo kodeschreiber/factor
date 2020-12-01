@@ -177,7 +177,7 @@ _build() {
   echo -n "Checking if rebuilding ..."
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
-    echo -e "\rChecking if rebuilding ... no. Syncing"
+    echo -e "\rChecking if rebuilding ... no. Syncing\n"
     mkdir -p "${f_prefix}"
     rsync -a "${f_cache}/" "${f_prefix}/"
     exit 12
@@ -213,7 +213,7 @@ _build() {
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  echo -e "\rChecking if rebuilding ... yes. Building ... Done"
+  echo -e "\rChecking if rebuilding ... yes. Building ... Done\n"
   exit 11
 }
 
