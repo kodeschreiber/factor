@@ -32,10 +32,10 @@ onerror() {
 
 filterpipe "${TMPDIR}/out" '| \1' 1
 filterpipe "${TMPDIR}/err" "$(printf '\033')[0;31m! \1$(printf '\033')[0m" 2
-filterpipe "${TMPDIR}/status" '] \1' 1
 
 shopt -s extdebug
-exec 3>"${TMPDIR}/status" 4>&2 5>&1
+exec 3>&1 4>&2 5>&1
+
 test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
 trap 'rm -rf "${TMPDIR}"' EXIT
 trap onerror ERR
@@ -173,16 +173,16 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  echo -n "Rebuild ${1}? " >&5
+  echo -n "Rebuild ${1}? "
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
-    echo -e "\rRebuild ${1}? No; Syncing" >&5
+    echo -e "\rRebuild ${1}? No; Syncing"
     mkdir -p "${f_prefix}"
     rsync -a "${f_cache}/" "${f_prefix}/"
     exit 12
   fi
   
-  echo -ne "\rRebuild ${1}? Yes; Building ..." >&5
+  echo -ne "\rRebuild ${1}? Yes; Building ..."
   rm -rf "${f_cache}"
   mkdir -p "${f_cache}"
   
@@ -213,7 +213,7 @@ _build() {
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  echo -e "\rRebuild ${1}? Yes; Building; Done" >&5
+  echo -e "\rRebuild ${1}? Yes; Building; Done"
   exit 11
 }
 
