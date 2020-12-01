@@ -20,6 +20,11 @@ if [ -z "${branch}" ]; then
   exit 1
 fi
 
+if [ -z $(git status --porcelain) ]; then
+  echo "There's nothing to commit"
+  exit 1
+fi
+
 # if ( echo "${location}" | grep -qs 'tags/' ); then
 #   echo "You are not on a branch. Please checkout a branch before proceeding"
 #   exit
