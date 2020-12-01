@@ -79,7 +79,7 @@ case $definc in
 esac
 
 if [ $force_push -eq 0 -a -z "$(git status --porcelain)" ]; then
-  echo "There's nothing to commit"
+  echo "There's nothing to commit. Use -p if you intend to just push"
   exit 1
 fi
 
