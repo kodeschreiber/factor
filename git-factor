@@ -189,7 +189,7 @@ _build() {
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  return 11
+  exit 11
 }
 
 mkdir -p "${FACTDIR}"
