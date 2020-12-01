@@ -10,6 +10,7 @@ Options:
 -m|--minor - Update for a minor release
 -B|--bugfix - Update for a bug fix (default)
 -b|--build - Update for a build
+-p|--push - Push all unpushed changes
 
 EOF
 }
@@ -17,11 +18,6 @@ EOF
 branch="$(git show-branch --current | sed 's/\[\(.*\)\].*/\1/')"
 if [ -z "${branch}" ]; then
   echo "Unable to detect the current branch"
-  exit 1
-fi
-
-if [ -z $(git status --porcelain) ]; then
-  echo "There's nothing to commit"
   exit 1
 fi
 
@@ -41,6 +37,7 @@ if [ $# -eq 2 ]; then
   shift
 fi
 
+force_push=0
 tag="$(git describe --tags | cut -d'-' -f1)"
 major="$(echo "${tag}" | cut -d'.' -f1)"
 minor="$(echo "${tag}" | cut -d'.' -f2)"
@@ -75,7 +72,16 @@ case $definc in
       ;;
     esac
   ;;
+  
+  -p|--push)
+    force_push=1
+  ;;
 esac
+
+if [ $force_push -eq 0 -a -z $(git status --porcelain) ]; then
+  echo "There's nothing to commit"
+  exit 1
+fi
 
 tag="${major}.${minor}.${bugfix}.${build}"
 
