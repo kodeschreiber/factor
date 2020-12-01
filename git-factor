@@ -210,6 +210,7 @@ if ! grep -qs '^.factor' "${GIT_ROOT}/.gitignore"; then
 fi
 
 _compose_config
+less "${CONFIG}"
 
 if [ $# -lt 2 ]; then
   _usage
