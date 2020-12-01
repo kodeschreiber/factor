@@ -23,7 +23,7 @@ filterpipe() {
 onerror() {
   if [ $nfe -ne 1 ]; then
     if [ $(( $LINENO - $elno )) -le $errlinlim ]; then
-      echo -e "\033[0;31m! ${errmsg}\033[0m" >&4; 
+      echo -e "\033[0;31m! ${errmsg}\033[0m" >&4 
     fi
     exit 10; 
   fi
@@ -121,11 +121,11 @@ _get_resource() {
   source <(_compose_entry "factor")
   source <(_compose_entry "${1}")
   
-  @e "No url defined for ${1}"
+  @e $LINENO "No url defined for ${1}"
   test ! -z "${f_url}"
-  @e "No prefix provided for ${1}"
+  @e $LINENO "No prefix provided for ${1}"
   test ! -z "${f_prefix}"
-  @e "No script sections specified for ${1}"
+  @e $LINENO "No script sections specified for ${1}"
   test ! -z "${f_script}"
   
   f_moddir="${FACTDIR}/${1}"
@@ -145,7 +145,7 @@ _build() {
   
   _compose_script
   
-  @e "Could not pull the module ${1}"
+  @e $LINENO "Could not pull the module ${1}"
   if [ ! -d "${f_module}" ]; then
     git clone "${f_url}" -b "${f_tag}" "${f_module}"
   fi
@@ -157,7 +157,7 @@ _build() {
   deprebuilt=0
   while read req; do
     if [ -z "${req}" ]; then continue; fi
-    @e "Requirement '${req}' for resource '${1}' failed to build";
+    @e $LINENO "Requirement '${req}' for resource '${1}' failed to build";
     nfe=1
     $0 build "${req}"
     res=$?
@@ -181,7 +181,7 @@ _build() {
   
   pushd "${f_module}" >/dev/null
 
-  @e "Refusing to build; target git directory is the parent not the submodule: '${1}'"
+  @e $LINENO "Refusing to build; target git directory is the parent not the submodule: '${1}'"
   test "${GIT_ROOT}" != "$(git rev-parse --show-toplevel)"
 
   git fetch --all >/dev/null
@@ -193,7 +193,7 @@ _build() {
 
 #   cat "${f_script_file}"
   source <(_compose_environment)
-  @e "Failed to build package ${1}"
+  @e $LINENO "Failed to build package ${1}"
   env -C "${f_module}" "${f_script_file}"
 
   mkdir -p "${f_prefix}"
@@ -212,7 +212,7 @@ _compose_config
 
 if [ $# -lt 2 ]; then
   _usage
-  @e "Too few arguments"
+  @e $LINENO "Too few arguments"
   /bin/false
 fi
 
