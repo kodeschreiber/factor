@@ -27,7 +27,7 @@ exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
 
 test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
 trap 'rm -rf "${TMPDIR}"' EXIT
-trap 'if [ nfe -ne 1 ]; then echo -e "\033[0;31m! ${errmsg}\033[0m; exit 10; fi" >&4' ERR
+trap 'if [ $nfe -ne 1 ]; then echo -e "\033[0;31m! ${errmsg}\033[0m" >&4; exit 10; fi' ERR
 
 ### FACTOR CODE ###
 GIT_ROOT="$(git rev-parse --show-toplevel)"
