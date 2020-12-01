@@ -14,16 +14,16 @@ Options:
 EOF
 }
 
-location="$(git describe --all)"
-if [ -z "${location}" ]; then
+branch="$(git show-branch --current | sed 's/\[\(.*\)\].*/\1/')"
+if [ -z "${branch}" ]; then
   echo "Unable to detect the current branch"
   exit 1
 fi
 
-if ( echo "${location}" | grep -qs 'tags/' ); then
-  echo "You are not on a branch. Please checkout a branch before proceeding"
-  exit
-fi
+# if ( echo "${location}" | grep -qs 'tags/' ); then
+#   echo "You are not on a branch. Please checkout a branch before proceeding"
+#   exit
+# fi
 
 if [ $# -lt 1 ]; then
   _usage
@@ -31,7 +31,7 @@ if [ $# -lt 1 ]; then
 fi
 
 definc="-B"
-if [ $# -lt 2 ]; then
+if [ $# -eq 2 ]; then
   definc="${1}"
   shift
 fi
@@ -74,7 +74,10 @@ esac
 
 tag="${major}.${minor}.${bugfix}.${build}"
 
+set -e
+
 git add -A
 git commit -m "${@}"
 git tag "${tag}"
-git push --atomic origin "$(git show-branch --current | sed 's/\[\(.*\)\].*/\1/')" "${tag}"
+git checkout "${branch}"
+git push --atomic origin "${branch}" "${tag}"
