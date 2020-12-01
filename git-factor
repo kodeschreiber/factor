@@ -120,6 +120,7 @@ _get_resource() {
   source <(_compose_entry "default_factor_values")
   source <(_compose_entry "factor")
   source <(_compose_entry "${1}")
+  env
   
   @e $LINENO "No url defined for ${1}"
   test ! -z "${f_url}"
@@ -191,7 +192,6 @@ _build() {
 
   popd >/dev/null
 
-#   cat "${f_script_file}"
   source <(_compose_environment)
   @e $LINENO "Failed to build package ${1}"
   env -C "${f_module}" "${f_script_file}"
@@ -209,6 +209,7 @@ if ! grep -qs '^.factor' "${GIT_ROOT}/.gitignore"; then
 fi
 
 _compose_config
+cat "${CONFIG}"
 
 if [ $# -lt 2 ]; then
   _usage
