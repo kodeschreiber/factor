@@ -151,7 +151,7 @@ _build() {
   
   @e $LINENO "Could not pull the module ${1}"
   if [ ! -d "${f_module}" ]; then
-    git clone "${f_url}" -b "${f_tag}" "${f_module}"
+    git clone "${f_url}" -b "${f_tag}" "${f_module}" 2>&1 >/dev/null
   fi
 
   curr_hash="$(md5sum "${f_script_file}" | head -c32)"
@@ -188,10 +188,12 @@ _build() {
   @e $LINENO "Refusing to build; target git directory is the parent not the submodule: '${1}'"
   test "${GIT_ROOT}" != "$(git rev-parse --show-toplevel)"
 
-  git fetch --all >/dev/null
-  git checkout "${f_tag}" 2>/dev/null
-  git reset --hard "${f_tag}" >/dev/null
-  git clean -xfdf
+  (
+    git fetch --all
+    git checkout "${f_tag}"
+    git reset --hard "${f_tag}"
+    git clean -xfdf
+  ) 2>&1 >/dev/null
 
   popd >/dev/null
 
