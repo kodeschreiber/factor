@@ -145,8 +145,8 @@ _build() {
   deprebuilt=0
   while read req; do
     if [ -z "${req}" ]; then continue; fi
-    $0 build "${req}"
     @e "Requirement '${req}' for resource '${1}' failed to build";
+    $0 build "${req}"
     case $? in
       12) continue; ;;
       11) deprebuilt=1; ;;
