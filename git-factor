@@ -88,7 +88,7 @@ EOF
 # _compose_entry <entry>
 _compose_entry() {
   _get_vars "${1}" | \
-  sed 's/\(.*\)/f_\1/' | \
+  sed 's/\(.*\)/export f_\1/' | \
   sed "s/=\"/='/;s/\"\s*\$/'/" | \
   sed "s/=/='/;s/\$/'/"
 }
