@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -e
 DEBUG="${DEBUG:-}"
 TMPDIR="$(mktemp -d)"
 CONFIG="${TMPDIR}/config"
@@ -146,7 +145,6 @@ _build() {
   deprebuilt=0
   while read req; do
     if [ -z "${req}" ]; then continue; fi
-    set +e
     $0 build "${req}"
     @e "Requirement '${req}' for resource '${1}' failed to build";
     case $? in
@@ -156,7 +154,6 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  set -e
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
     mkdir -p "${f_prefix}"
@@ -188,7 +185,6 @@ _build() {
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  set +e
   return 11
 }
 
