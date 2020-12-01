@@ -109,14 +109,14 @@ _compose_script() {
 # _compose_environment env1 ... envN
 _compose_environment() {
   (
-  for envi in $f_env; do
-    _get_vars "${envi}"
-  done | sed 's/=\(.*\)/="\1"/; /^\s*#/d'
   cat <<EOF
 PREFIX_CACHE="${f_cache}"
 PREFIX_BUILD="${f_prefix}"
 GIT_ROOT="${GIT_ROOT}"
 EOF
+  for envi in $f_env; do
+    _get_vars "${envi}"
+  done | sed 's/=\(.*\)/="\1"/; /^\s*#/d'
   ) | sed 's/\(.*\)/export \1/'
 }
 
