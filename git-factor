@@ -32,10 +32,11 @@ onerror() {
 
 filterpipe "${TMPDIR}/out" '| \1' 1
 filterpipe "${TMPDIR}/err" "$(printf '\033')[0;31m! \1$(printf '\033')[0m" 2
+filterpipe "${TMPDIR}/status" '] \1' 1
 
 shopt -s extdebug
-exec 3>&1 4>&2 5>&1
-exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
+exec 3>&1 4>&2
+exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err" 5>"${TMPDIR}/status"
 
 test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
 trap 'rm -rf "${TMPDIR}"' EXIT
@@ -174,16 +175,16 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  echo -n "Checking if rebuilding ..."
+  echo -n "Checking if rebuilding ..." >5
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
-    echo -e "\rChecking if rebuilding ... no. Syncing\n"
+    echo -e "\rChecking if rebuilding ${1} ... no. Syncing\n" >5
     mkdir -p "${f_prefix}"
     rsync -a "${f_cache}/" "${f_prefix}/"
     exit 12
   fi
   
-  echo -e "\rChecking if rebuilding ... yes. Building ..."
+  echo -e "\rChecking if rebuilding ${1} ... yes. Building ..." >5
   rm -rf "${f_cache}"
   mkdir -p "${f_cache}"
   
@@ -213,7 +214,7 @@ _build() {
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  echo -e "\rChecking if rebuilding ... yes. Building ... Done\n"
+  echo -e "\rChecking if rebuilding ${1} ... yes. Building ... Done\n" >5
   exit 11
 }
 
