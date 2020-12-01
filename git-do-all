@@ -87,6 +87,11 @@ tag="${major}.${minor}.${bugfix}.${build}"
 
 set -e
 
+if [ $force_push -eq 1 ]; then
+  git push --atomic origin "${branch}" "${tag}"
+  exit 0
+fi
+
 git add -A
 git commit -m "${@}"
 git tag "${tag}"
