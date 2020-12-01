@@ -35,7 +35,6 @@ filterpipe "${TMPDIR}/err" "$(printf '\033')[0;31m! \1$(printf '\033')[0m" 2
 
 shopt -s extdebug
 exec 3>&1 4>&2 5>&1
-exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
 
 test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
 trap 'rm -rf "${TMPDIR}"' EXIT
@@ -204,10 +203,11 @@ _build() {
   source <(_compose_environment)
   @e $LINENO "Failed to build package ${1}"
   if [ -z "${f_verbose}" ]; then
-    env -C "${f_module}" "${f_script_file}" 2>&1 >/dev/null
+    exec 1>/dev/null 2>/dev/null
   else
-    env -C "${f_module}" "${f_script_file}"
+     exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
   fi
+  env -C "${f_module}" "${f_script_file}"
 
   mkdir -p "${f_prefix}"
   rsync -a "${f_cache}/" "${f_prefix}/"
