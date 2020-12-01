@@ -75,7 +75,11 @@ EOF
 }
 
 _compose_config() {
-  find "${GIT_ROOT}" -type f -name *.ftr -exec cat {} + > "${CONFIG}"
+  find "${GIT_ROOT}" -type f -name *.ftr | \
+  while read file; do
+    cat "${file}"
+    echo -ne "\n\n"
+  done > "${CONFIG}"
   cat <<EOF >>"${CONFIG}"
 [default_factor_values]
   tag=master
@@ -120,8 +124,6 @@ _get_resource() {
   source <(_compose_entry "default_factor_values")
   source <(_compose_entry "factor")
   source <(_compose_entry "${1}")
-  echo $f_prefix
-  echo $f_tag
   
   @e $LINENO "No url defined for ${1}"
   test ! -z "${f_url}"
@@ -210,7 +212,6 @@ if ! grep -qs '^.factor' "${GIT_ROOT}/.gitignore"; then
 fi
 
 _compose_config
-less "${CONFIG}"
 
 if [ $# -lt 2 ]; then
   _usage
