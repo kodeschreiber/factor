@@ -1,223 +1,219 @@
 #!/bin/bash
 
+set -e
+DEBUG="${DEBUG:-}"
+TMPDIR="$(mktemp -d)"
+CONFIG="${TMPDIR}/config"
+SCRIPT_SED="${TMPDIR}/getscript.sed"
+VARS_SED="${TMPDIR}/getvars.sed"
+
+# filterpipe <pipepath> <sed_output> <outpipe>
+filterpipe() {
+  (
+    if [ ! -p "${1}" ]; then mkfifo "${1}"; fi
+    sed "s/\(.*\)/${2}/" < "${1}" >&$3
+  ) &
+  while [ ! -p "${1}" ]; do sleep 0.1; done
+}
+
+@e() { errmsg="${@}"; }
+
+filterpipe "${TMPDIR}/out" '| \1' 1
+filterpipe "${TMPDIR}/err" "$(printf '\033')[0;31m! \1$(printf '\033')[0m" 2
+
+shopt -s extdebug
 exec 3>&1 4>&2 5>&1
+exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
+
+test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
+trap 'rm -rf "${TMPDIR}"' EXIT
+trap 'echo -e "\033[0;31m! ${errmsg}\033[0m" >&4; exit 10' ERR
+
+### FACTOR CODE ###
 GIT_ROOT="$(git rev-parse --show-toplevel)"
-FACTOR_FILE="$(realpath "${FACTOR_FILE:-${GIT_ROOT}/factor.conf}")"
-HERE="$(dirname "${FACTOR_FILE}")"
-FACTDIR="${HERE}/.factor"
-RFACTDIR="$(echo "${FACTDIR}" | sed 's/.*\(\.factor\.*\)/\1/')"
-OPER="${1}"
-
-# _msg <type> <info>
-_msg() {
-  lvl="$(_config 'factor.verbose')"
-  lvl="${lvl:-1}"
-  case "${1}" in
-    ACTION)
-      if [ $lvl -ge 1 ]; then echo -e "- ${2}" >&3; fi
-    ;;
-    ERROR)
-      if [ $lvl -ge 1 ]; then echo -e "\033[0;31m! ${2}\033[0m" >&4; exit 10; fi
-    ;;
-    DEBUG)
-      if [ $lvl -ge 2 ]; then echo -e "\033[1;34m? ${2}\033[0m" >&5; fi
-    ;;
-  esac
-}
-
-### Aliases ###
-@a() { _msg ACTION "${1}"; }
-@e() { _msg ERROR "${1}"; }
-@d() { _msg DEBUG "${1}"; }
-@einz() { if [ $? -ne 0 ]; then @e "${1}"; fi; }
-###############
-
-# _get_vars <resource>
-_get_vars() {
-  @d "Getting settings for resource '${1}'"
-  cat "${FACTOR_FILE}" | \
-  sed -n "/\[${1}\]/,/^\s*\[*[a-zA-Z0-9_-]*\]*$/"'!d'"; //d; /^\s*#/d; s/^\s*\([a-zA-Z][a-zA-Z0-9]*=.*\)/\1/; s@%git%@${GIT_ROOT}@; p"
-}
+FACTDIR="${GIT_ROOT}/.factor"
 
 _usage() {
-  @d "Printing usage information"
-  cat <<'EOF'
+  cat <<'EOF' >&5
 %doc%
 EOF
 }
 
+# _get_vars <resource>
+_get_vars() {
+  cat <<'EOF' | sed "s@%1%@${1}@;s@%GR%@${GIT_ROOT}@" >"${VARS_SED}"
+/\[%1%\]/,/^\s*\[[a-zA-Z0-9_-]*\]/!d
+//d
+/^\s*$/d
+s/^\s*\([a-zA-Z][a-zA-Z0-9]*=.*\)/\1/
+s@%git%@%GR%@
+p
+EOF
+  sed -n -f "${VARS_SED}" < "${CONFIG}"
+}
+
+# _get_vars <resource>
+_get_script() {
+  cat <<'EOF' | sed "s@%1%@${1}@;s@%GR%@${GIT_ROOT}@" >"${SCRIPT_SED}"
+/\[%1%\]/,/^\s*\[[a-zA-Z0-9_-]*\]/!d
+//d
+#/^\s*$/d
+p
+EOF
+  sed -n -f "${SCRIPT_SED}" < "${CONFIG}"
+}
+
+_compose_config() {
+  find "${GIT_ROOT}" -type f -name *.ftr -exec cat {} + > "${CONFIG}"
+  cat <<EOF >>"${CONFIG}"
+[default_factor_values]
+  tag=master
+  prefix=%git%
+
+[endoffactorconfig]
+EOF
+}
+
+# _compose_entry <entry>
+_compose_entry() {
+  _get_vars "${1}" | \
+  sed 's/\(.*\)/f_\1/' | \
+  sed "s/=\"/='/;s/\"\s*\$/'/" | \
+  sed "s/=/='/;s/\$/'/"
+}
+
+# _compose_script scr1 ... scrN
+_compose_script() {
+  for scr in $f_script; do
+    _get_script "${scr}"
+  done > "${f_script_file}"
+  chmod +x "${f_script_file}"
+}
+
+# _compose_environment env1 ... envN
+_compose_environment() {
+  (
+  for envi in $f_env; do
+    _get_vars "${envi}"
+  done | sed 's/=\(.*\)/="\1"/; /^\s*#/d'
+  cat <<EOF
+PREFIX_CACHE="${f_cache}"
+PREFIX_BUILD="${f_prefix}"
+GIT_ROOT="${GIT_ROOT}"
+EOF
+  ) | sed 's/\(.*\)/export \1/'
+}
+
 # _get_resource <resource>
 _get_resource() {
-  @d "Sourcing variables for '${1}'"
-  source <(_get_vars "${1}" | sed 's/\(.*\)/f_\1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/='/;s/\$/'/")
+  source <(_compose_entry "default_factor_values")
+  source <(_compose_entry "factor")
+  source <(_compose_entry "${1}")
   
-  @d "Checking for required variables for '${1}'"
-  if [ -z "${f_env}" ]; then f_env="$(_config 'factor.env' | sed 's/%none%//g')"; fi
-  f_prefix="${f_prefix:-$(_config 'factor.prefix' | sed "s@%git%@${GIT_ROOT}@")}"
-  if [ -z "${f_url}" ]; then @e "No url defined for ${1}"; fi
-  if [ -z "${f_prefix}" ]; then @e "No prefix provided for ${1}"; fi
-  if [ -z "${f_script}" ]; then
-    ffiles="$(find "${HERE}" | grep "/${1}.factor" | wc -l)"
-    if [ $ffiles -lt 1 ]; then
-      @e "No script defined or ${1}.factor files located in GIT root"
-    elif [ $ffiles -gt 1 ]; then
-      @e "Multiple ${1}.factor files located. Please define the one you wish to use."
-    fi
-    f_script="$(find "${HERE}" | grep "${1}.factor")"
-  fi
-  f_quote="'"
-  if [ "$(_config 'factor.safeenv')" == "false" ]; then
-    f_quote='"'
-  fi
+  @e "No url defined for ${1}"
+  test ! -z "${f_url}"
+  @e "No prefix provided for ${1}"
+  test ! -z "${f_prefix}"
+  @e "No script sections specified for ${1}"
+  test ! -z "${f_script}"
   
-  @d "Setting common variables for '${1}'"
-  f_tag="${f_tag:-master}"
   f_moddir="${FACTDIR}/${1}"
   f_lock="${f_moddir}/lock"
   f_cache="${f_moddir}/cache"
   f_module="${f_moddir}/module"
-  f_rmodule="${RFACTDIR}/${1}/module"
   f_tagfile="${f_moddir}/tag"
-  f_tmp_root="${f_cache}/.root_bind"
-  f_tmp_module="${f_cache}/.module_bind"
-}
-
-_global_sync() {
-  @d "Ensuring .factor directory"
-  mkdir -p "${FACTDIR}"
-  @d "Adding .gitignore file"
-  echo "." > "${FACTDIR}/.gitignore"
-}
-
-# _sync <resource>
-_sync() {
-  @a "Synchronizing '${1}'"
-  @d "Checking for factor.conf"
-  if [ ! -f "${FACTOR_FILE}" ]; then
-    @e "Could not find a factor.conf file in this repository"
-  fi
-  
-  @d "Performing global sync for '${1}'"
-  _global_sync
-  _get_resource "${1}"
-  
-  @d "Ensuring module, lock and tag for '${1}'"
-  if [ ! -d "${f_moddir}" ]; then mkdir -p "${f_moddir}"; fi
-  if [ ! -f "${f_lock}" ]; then touch "${f_lock}"; fi
-  if [ ! -f "${f_tag}" ]; then touch "${f_tagfile}"; fi
-  
-  @d "Check if '${1}' need to be indexed"
-  if ! grep -qs "\[submodule \"${1}\"\]" "${HERE}/.gitmodules"; then
-    git submodule add --force --name "${1}" "${f_url}" "${f_rmodule}" 2>&1 >/dev/null
-  fi
-  
-  @d "Updating the url and tag of '${1}'"
-  git config -f "${HERE}/.gitmodules" "submodule.${1}.branch" "${f_tag}"
-  git config -f "${HERE}/.gitmodules" "submodule.${1}.url" "${f_url}"
-  git config -f "${HERE}/.gitmodules" "submodule.${1}.path" "${f_rmodule}"
-  
-  @d "Updating '${1}' if its module directory is empty"
-  if [ ! -d "${f_rmodule}" ]; then
-    mkdir -p "${f_rmodule}"
-    git submodule update --init --force "${f_rmodule}" 2>&1 >/dev/null
-  elif [ "$(find "${f_rmodule}" -maxdepth 0 -empty)" == "${f_rmodule}" ]; then
-    git submodule update --init --force "${f_rmodule}" 2>&1 >/dev/null
-  else
-    git submodule update --force "${f_rmodule}" 2>&1 >/dev/null
-  fi
+  f_rmodule="${RFACTDIR}/${1}/module"
+  f_script_file="${TMPDIR}/${1}.sh"
 }
 
 # _build <resource>
 _build() {
-  @d "Syncing '${1}'"
-  $0 sync "${1}"
-  @einz "Cannot build ${1}"
-  _get_resource "${1}"
+  if [ ! -d "${f_moddir}" ]; then mkdir -p "${f_moddir}"; fi
+  if [ ! -f "${f_lock}" ]; then touch "${f_lock}"; fi
+  if [ ! -f "${f_tag}" ]; then touch "${f_tagfile}"; fi
+  
+  _compose_script
+  
+  @e "Could not pull the module ${1}"
+  if [ ! -d "${f_module}" ]; then
+    git clone "${f_url}" -b "${f_tag}" "${f_module}"
+  fi
 
-  @d "Getting the varibles for checking"
-  curr_hash="$(md5sum "${f_script}" | head -c32)"
+  curr_hash="$(md5sum "${f_script_file}" | head -c32)"
   lock_hash="$(cat "${f_lock}")"
   lock_tag="$(cat "${f_tagfile}")"
   
-  @d "Checking '${1}'s dependencies"
   deprebuilt=0
   while read req; do
     if [ -z "${req}" ]; then continue; fi
+    set +e
     $0 build "${req}"
+    @e "Requirement '${req}' for resource '${1}' failed to build";
     case $? in
       12) continue; ;;
       11) deprebuilt=1; ;;
-      *) @e "Requirement '${req}' for resource '${1}' failed to build"; ;;
+      *) exit 1; ;;
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  @d "Checking if rebuilding '${1}' is necessary"
+  set -e
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
-    @d "Rebuild not required for '${1}'"
-    @d "Creating prefix directory for '${1}'"
     mkdir -p "${f_prefix}"
-    @d "Copying cache to prefix for '${1}'"
     rsync -a "${f_cache}/" "${f_prefix}/"
     exit 12
   fi
-
-  @a "Building '${1}'"
-  @d "Fetching and setting the tag for '${1}'"
-  (
-    cd "${f_module}"
-    git fetch --all
-    git checkout "${f_tag}"
-  )
   
-  @d "Renewing cache for '${1}'"
-  if [ -d "${f_cache}" ]; then rm -rf "${f_cache}"; fi
-  if [ ! -d "${f_cache}" ]; then mkdir -p "${f_cache}"; fi
-  (
-    GIT_ROOT="$(git rev-parse --show-toplevel)"
-    cd "${f_module}"
-    
-    @d "Ensure that we are in '${1}' and not hte parent"
-    if [ "${GIT_ROOT}" == "$(git rev-parse --show-toplevel)" ]; then
-      @e "Refusing to build; target git directory is the parent not the submodule: '${1}'"
-    fi
-    
-    @d "Resetting module"
-    git reset --hard
-    git clean -xfdf
-
-    @d "Creating environment for '${1}'"
-    export PREFIX_CACHE="${f_cache}"
-    export PREFIX_BUILD="${f_prefix}"
-    export GIT_ROOT
-    while read envi; do
-      source <(_get_vars "${envi}" | sed 's/\(.*\)/export \1/' | sed "s/=\"/='/;s/\"\s*\$/'/" | sed "s/=/=${f_quote}/;s/\$/${f_quote}/")
-    done < <(echo "${f_env}" | sed 's/ /\n/g')
-    @d "Executing script for '${1}'"
-    env -C "${f_module}" "${f_script}"
-  )
+  rm -rf "${f_cache}"
+  mkdir -p "${f_cache}"
   
-  @einz "Failed to build package ${1}"
+  pushd "${f_module}" >/dev/null
 
-  @d "Creating prefix directory for '${1}'"
+  @e "Refusing to build; target git directory is the parent not the submodule: '${1}'"
+  test "${GIT_ROOT}" != "$(git rev-parse --show-toplevel)"
+
+  git fetch --all >/dev/null
+  git checkout "${f_tag}" 2>/dev/null
+  git reset --hard "${f_tag}" >/dev/null
+  git clean -xfdf
+
+  popd >/dev/null
+
+#   cat "${f_script_file}"
+  source <(_compose_environment)
+  @e "Failed to build package ${1}"
+  env -C "${f_module}" "${f_script_file}"
+
   mkdir -p "${f_prefix}"
-  @d "Copying cache to prefix for '${1}'"
   rsync -a "${f_cache}/" "${f_prefix}/"
-  @d "Updaing the lock and tag"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
+  set +e
   return 11
 }
 
-_clean() {
-  @a "Cleaning '${1}'"
-  _get_resource "${1}"
-  rm -rf "${f_moddir}"
-}
-
-if [ ! -f "${GIT_ROOT}/.factorconfig" ]; then
-  _def_config
+mkdir -p "${FACTDIR}"
+if ! grep -qs '^.factor' "${GIT_ROOT}/.gitignore"; then
+  echo ".factor" >> "${GIT_ROOT}/.gitignore"
 fi
 
-@d "You are currently building in $(pwd) with GIT: ${GIT_ROOT}"
+_compose_config
 
+if [ $# -lt 2 ]; then
+  _usage
+  @e "Too few arguments"
+  /bin/false
+fi
+
+OPER="${1}"
+shift
+
+while [ $# -gt 0 ]; do
+  _get_resource "${1}"
+  case "${OPER}" in
+    build) _build "${1}"; exit $?; ;;
+    clean) rm -rf "${f_moddir}"; ;;
+    *) _usage; exit 1; ;;
+  esac
+  shift
+done
