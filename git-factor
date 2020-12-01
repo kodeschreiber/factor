@@ -174,13 +174,16 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
+  echo -n "Checking if rebuilding ..."
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
+    echo -e "\rChecking if rebuilding ... no. Syncing"
     mkdir -p "${f_prefix}"
     rsync -a "${f_cache}/" "${f_prefix}/"
     exit 12
   fi
   
+  echo -e "\rChecking if rebuilding ... yes. Building ..."
   rm -rf "${f_cache}"
   mkdir -p "${f_cache}"
   
@@ -200,12 +203,17 @@ _build() {
 
   source <(_compose_environment)
   @e $LINENO "Failed to build package ${1}"
-  env -C "${f_module}" "${f_script_file}"
+  if [ -z "${f_verbose}" ]; then
+    env -C "${f_module}" "${f_script_file}" 2>&1 >/dev/null
+  else
+    env -C "${f_module}" "${f_script_file}"
+  fi
 
   mkdir -p "${f_prefix}"
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
+  echo -e "\rChecking if rebuilding ... yes. Building ... Done"
   exit 11
 }
 
