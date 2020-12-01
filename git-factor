@@ -6,6 +6,8 @@ CONFIG="${TMPDIR}/config"
 SCRIPT_SED="${TMPDIR}/getscript.sed"
 VARS_SED="${TMPDIR}/getvars.sed"
 nfe=0
+elno=0
+errlinlim=2
 
 # filterpipe <pipepath> <sed_output> <outpipe>
 filterpipe() {
@@ -16,7 +18,16 @@ filterpipe() {
   while [ ! -p "${1}" ]; do sleep 0.1; done
 }
 
-@e() { errmsg="${@}"; }
+@e() { elno=$1; shift; errmsg="${@}"; }
+
+onerror() {
+  if [ $nfe -ne 1 ]; then
+    if [ $(( $LINENO - $elno )) -le $errlinlim ]; then
+      echo -e "\033[0;31m! ${errmsg}\033[0m" >&4; 
+    fi
+    exit 10; 
+  fi
+}
 
 filterpipe "${TMPDIR}/out" '| \1' 1
 filterpipe "${TMPDIR}/err" "$(printf '\033')[0;31m! \1$(printf '\033')[0m" 2
@@ -27,7 +38,7 @@ exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
 
 test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
 trap 'rm -rf "${TMPDIR}"' EXIT
-trap 'if [ $nfe -ne 1 ]; then echo -e "\033[0;31m! ${errmsg}\033[0m" >&4; exit 10; fi' ERR
+trap onerror ERR
 
 ### FACTOR CODE ###
 GIT_ROOT="$(git rev-parse --show-toplevel)"
