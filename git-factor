@@ -5,6 +5,7 @@ TMPDIR="$(mktemp -d)"
 CONFIG="${TMPDIR}/config"
 SCRIPT_SED="${TMPDIR}/getscript.sed"
 VARS_SED="${TMPDIR}/getvars.sed"
+nfe=0
 
 # filterpipe <pipepath> <sed_output> <outpipe>
 filterpipe() {
@@ -26,7 +27,7 @@ exec 1>"${TMPDIR}/out" 2>"${TMPDIR}/err"
 
 test ! -z $DEBUG && trap 'echo -e "\033[1;34m? ${BASH_COMMAND}\033[0m" >&5' DEBUG
 trap 'rm -rf "${TMPDIR}"' EXIT
-trap 'echo -e "\033[0;31m! ${errmsg}\033[0m" >&4; exit 10' ERR
+trap 'if [ nfe -ne 1 ]; then echo -e "\033[0;31m! ${errmsg}\033[0m; exit 10; fi" >&4' ERR
 
 ### FACTOR CODE ###
 GIT_ROOT="$(git rev-parse --show-toplevel)"
@@ -146,8 +147,11 @@ _build() {
   while read req; do
     if [ -z "${req}" ]; then continue; fi
     @e "Requirement '${req}' for resource '${1}' failed to build";
+    nfe=1
     $0 build "${req}"
-    case $? in
+    res=$?
+    nfe=0
+    case $res in
       12) continue; ;;
       11) deprebuilt=1; ;;
       *) exit 1; ;;
