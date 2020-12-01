@@ -10,13 +10,14 @@ elno=0
 errlinlim=2
 
 # filterpipe <pipepath> <sed_output> <outpipe>
-filterpipe() {
+filterpipe() (
   (
     if [ ! -p "${1}" ]; then mkfifo "${1}"; fi
     sed "s/\(.*\)/${2}/" < "${1}" >&$3
   ) &
   while [ ! -p "${1}" ]; do sleep 0.1; done
-}
+  kill %1
+)
 
 @e() { elno=$1; shift; errmsg="${@}"; }
 
