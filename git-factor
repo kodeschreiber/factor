@@ -126,7 +126,7 @@ _get_resource() {
   source <(_compose_entry "${1}")
   
   @e $LINENO "No such entry: ${1}"
-  test grep -qs "\[${1}\]" "${CONFIG}"
+  grep -qs "\[${1}\]" "${CONFIG}"
   @e $LINENO "No url defined for ${1}"
   test ! -z "${f_url}"
   @e $LINENO "No prefix provided for ${1}"
