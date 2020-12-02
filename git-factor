@@ -125,6 +125,8 @@ _get_resource() {
   source <(_compose_entry "factor")
   source <(_compose_entry "${1}")
   
+  @e $LINENO "No such entry: ${1}"
+  test grep -qs "\[${1}\]" "${CONFIG}"
   @e $LINENO "No url defined for ${1}"
   test ! -z "${f_url}"
   @e $LINENO "No prefix provided for ${1}"
@@ -143,6 +145,11 @@ _get_resource() {
 
 # _build <resource>
 _build() {
+  NONE="\033[0m"
+  ORANGE="\033[0;33m"
+  RED="\033[0;31m"
+  GREEN="\033[0;32m"
+
   if [ ! -d "${f_moddir}" ]; then mkdir -p "${f_moddir}"; fi
   if [ ! -f "${f_lock}" ]; then touch "${f_lock}"; fi
   if [ ! -f "${f_tag}" ]; then touch "${f_tagfile}"; fi
@@ -173,16 +180,17 @@ _build() {
     esac
   done < <(echo "${f_requires}" | sed 's/ /\n/g')
   
-  echo -n "Rebuild ${1}? "
+  echo -ne "${ORANGE}Rebuild ${1} [ ]?${NONE}"
   if [ $deprebuilt -ne 1 -a -d "${f_cache}" -a \
     "${curr_hash}" == "${lock_hash}" -a "${f_tag}" == "${lock_tag}" ]; then
-    echo -e "\rRebuild ${1}? No; Syncing"
+    echo -ne "\r${ORANGE}Rebuild ${1} ${RED}[✗]${ORANGE}? Syncing [ ]${NONE}"
     mkdir -p "${f_prefix}"
     rsync -a "${f_cache}/" "${f_prefix}/"
+    echo -ne "\r${ORANGE}Rebuild ${1} ${RED}[✗]${ORANGE}? Syncing ${GREEN}[✔]${NONE}"
     exit 12
   fi
   
-  echo -ne "\rRebuild ${1}? Yes; Building ..."
+  echo -ne "\r${ORANGE}Rebuild ${1} ${GREEN}[✔]${ORANGE}? Building [ ]${NONE}"
   rm -rf "${f_cache}"
   mkdir -p "${f_cache}"
   
@@ -209,11 +217,13 @@ _build() {
   fi
   env -C "${f_module}" "${f_script_file}"
 
+  echo -ne "\r${ORANGE}Rebuild ${1} ${GREEN}[✔]${ORANGE}? Building ${GREEN}[✔]${ORANGE}. Syncing [ ].${NONE}"
+
   mkdir -p "${f_prefix}"
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  echo -e "\rRebuild ${1}? Yes; Building; Done"
+  echo -ne "\r${ORANGE}Rebuild ${1} ${GREEN}[✔]${ORANGE}? Building ${GREEN}[✔]${ORANGE}. Syncing ${GREEN}[✔]${ORANGE}.${NONE}"
   exit 11
 }
 
