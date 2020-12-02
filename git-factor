@@ -186,7 +186,7 @@ _build() {
     echo -ne "\r${ORANGE}Rebuild ${1} ${RED}[✗]${ORANGE}? Syncing [ ]${NONE}"
     mkdir -p "${f_prefix}"
     rsync -a "${f_cache}/" "${f_prefix}/"
-    echo -ne "\r${ORANGE}Rebuild ${1} ${RED}[✗]${ORANGE}? Syncing ${GREEN}[✔]${NONE}"
+    echo -ne "\r${ORANGE}Rebuild ${1} ${RED}[✗]${ORANGE}? Syncing ${GREEN}[✔]${NONE}\n"
     exit 12
   fi
   
@@ -223,7 +223,7 @@ _build() {
   rsync -a "${f_cache}/" "${f_prefix}/"
   echo "${curr_hash}" > "${f_lock}"
   echo "${f_tag}" > "${f_tagfile}"
-  echo -ne "\r${ORANGE}Rebuild ${1} ${GREEN}[✔]${ORANGE}? Building ${GREEN}[✔]${ORANGE}. Syncing ${GREEN}[✔]${ORANGE}.${NONE}"
+  echo -ne "\r${ORANGE}Rebuild ${1} ${GREEN}[✔]${ORANGE}? Building ${GREEN}[✔]${ORANGE}. Syncing ${GREEN}[✔]${ORANGE}.${NONE}\n"
   exit 11
 }
 
