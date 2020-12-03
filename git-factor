@@ -75,7 +75,7 @@ EOF
 }
 
 _compose_config() {
-  find "${GIT_ROOT}" -type f -name *.ftr | \
+  find "${GIT_ROOT}" -type f -name *.ftr -not -path '.factor' | \
   while read file; do
     cat "${file}"
     echo -ne "\n\n"
