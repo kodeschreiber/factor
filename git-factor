@@ -84,6 +84,7 @@ _compose_config() {
 [default_factor_values]
   tag=master
   prefix=%git%
+  keepcache=0
 
 [endoffactorconfig]
 EOF
@@ -199,12 +200,15 @@ _build() {
   @e $LINENO "Refusing to build; target git directory is the parent not the submodule: '${1}'"
   test "${GIT_ROOT}" != "$(git rev-parse --show-toplevel)"
 
+  if [ "${keepcache}" -ne 1 ]; then
+  @e $LINENO "Failed to clean module directory"
   (
     git fetch --all
     git checkout "${f_tag}"
     git reset --hard "${f_tag}"
     git clean -xfdf
   ) 2>&1 >/dev/null
+  fi
 
   popd >/dev/null
 
