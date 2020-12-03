@@ -200,6 +200,7 @@ _build() {
   @e $LINENO "Refusing to build; target git directory is the parent not the submodule: '${1}'"
   test "${GIT_ROOT}" != "$(git rev-parse --show-toplevel)"
 
+  echo ">>> ${noclean}"
   if [ $noclean -ne 1 ]; then
   @e $LINENO "Failed to clean module directory"
   (
